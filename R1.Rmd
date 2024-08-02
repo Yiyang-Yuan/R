@@ -1,0 +1,200 @@
+---
+title: "STATS 330 Assignment 4"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 18:00pm, 16th Oct 2023'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+  pdf_document:
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE, message=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(MASS)
+library(mgcv)
+library(s20x)
+library(MuMIn)
+library(statmod)
+library(pROC)
+library(crossval)
+```
+
+# Question 1
+
+## (a) Create a data frame containing this data. Designate pip as a factor and print out the data set.
+
+```{r,fig.height=4.2,fig.width=6}
+pyr = c(1.50,1.06,0.75,1.10,0.78,0.55,0.80,0.57,0.40,0.65,0.46,0.32,0.00)
+pip = c(0,0,0,0.25,0.25,0.25,2.5,2.5,2.5,10,10,10,0)
+n = c(150,149,150,151,151,150,149,150,140,150,150,149,200)
+y = c(138,75,32,129,65,19,143,112,37,141,117,56,1)
+Trca.df = data.frame(pyr=pyr,pip=factor(pip),n=n,y=y)
+Trca.df
+```
+
+## (b) Fit a logistic regression model that uses both pyr and pip to model the probability of mortality. For this model treat pip as a factor and pyr as a continuous numeric variable. Do the appropriate added variable test to see if there is evidence that the interaction between pip and pyr should be included in the model. What do you conclude from this test? Comment briefly.
+
+```{r,fig.height=3.6,fig.width=6}
+fit1.glm = glm(cbind(y,n-y)~pyr+pip,family='binomial',data=Trca.df)
+fit2.glm = glm(cbind(y,n-y)~pyr*pip,family='binomial',data=Trca.df)
+anova(fit1.glm,fit2.glm,test='Chisq')
+```
+
+### Comment briefly
+
+There is a very strong relationship with P-value=5.162e-10 and therefore the interaction between pip and pyr should be included in the model.
+
+## (c) Consider the test in (b). What is used as the test statistic and what is used as the reference distribution? Use the parametric bootstrap to generate an empirical sampling distribution for this test statistic. Compare your empirical sampling distribution to the (theory based) reference distribution. Does this affect your conclusion about whether or not the interaction should be included in the model?
+
+```{r,fig.height=4.2,fig.width=6}
+set.seed(250)
+nsims=1000
+dev.diffs=numeric(nsims)
+for(i in 1:nsims) {
+  ynew=rbinom(13,Trca.df$n,fitted.values(fit1.glm))
+  nfit1.glm=glm(cbind(ynew,n-ynew)~pyr+pip,family='binomial',data=Trca.df)
+  nfit2.glm=glm(cbind(ynew,n-ynew)~pyr*pip,family='binomial',data=Trca.df)
+  dev.diffs[i]=deviance(nfit1.glm)-deviance(nfit2.glm)
+}
+hist(dev.diffs,probability=TRUE,ylim=c(0,0.25))
+values=seq(0,15,0.1)
+lines(values,dchisq(values,3),col='blue')
+```
+
+### Comment briefly
+
+The plot shows the difference in deviance between two models and the histogram distribution. For the parametric bootstrap since the null hypothesis shows that the interaction is no needed in the model but the line shows that it fits the histogram distribution well. Therefore, we can conclude that the interaction still need to be included.
+
+## (d) Use the model you selected to estimate the concentration of pyrethrin needed to have a .80 probability of mortality in flour beetles when no piperonyl butoxide is used. Repeat this calculation for solutions that contain 10% piperonyl butoxide. Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+summary(fit2.glm)
+betas=coef(fit2.glm)
+betas
+est0=(log(0.8/(1-0.8))-betas[1])/betas[2]
+est0
+est10=(log(0.8/(1-0.8))-betas[1]-betas[5])/(betas[2]+betas[8])
+est10
+```
+
+### Comment briefly
+
+$log(odds_i)=\beta_0+\beta_1\times(pyr_i)+\beta_2\times(pip0.25_i)+\beta_3\times(pip2.5_i)+\beta_4\times(pip10_i)+\beta_5\times(pyr_i)\times(pip0.25_i)+\beta_6\times(pyr_i)\times(pip2.5_i)+\beta_7\times(pyr_i)\times(pip10_i)$ We estimate that 1.31% concentration of pyrethrin needed to have 80 probability of mortality in flour beetles when no piperonyl butoxide is used. Then we estimate that 0.49% concentration of pyrethrin needed to have 80 probability of mortality in flour beetles when 10% piperonyl butoxide is used.
+
+## (e) Use the parametric bootstrap to create 95% confidence intervals for each of your estimates from (d). Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+set.seed(250)
+nsims=1000
+pip0.est=pip10.est=numeric(nsims)
+for(i in 1:nsims) {
+  ynew=rbinom(13,Trca.df$n,fitted.values(fit2.glm))
+  nfit.glm=glm(cbind(ynew,n-ynew)~pyr*pip,family='binomial',data=Trca.df)
+  betas=coef(nfit.glm)
+  pip0.est[i]=(log(0.8/(1-0.8))-betas[1])/betas[2]
+  pip10.est[i]=(log(0.8/(1-0.8))-betas[1]-betas[5])/(betas[2]+betas[8])
+}
+quantile(pip0.est,c(0.025,0.975))
+quantile(pip10.est,c(0.025,0.975))
+```
+
+### Comment briefly
+
+We estimate that the concentration of pyrethrin needed to have 80 probability of mortality in flour beetles when no piperonyl butoxide is used to be between 1.24 and 1.38%. Then We estimate that yhe estimate concentration of pyrethrin needed to have 80 probability of mortality in flour beetles when 10% piperonyl butoxide is used to be between 0.46% and 0.52%.
+
+## (f) Based on these results, briefly comment on the effectiveness of piperonyl butoxide as a synergist.
+
+According to the results we can see that if we use piperonyl butoxide, the concentration of pyrethrin will decrease (0% piperonyl butoxide will use 1.31% concentration of pyrethrin and 10% piperonyl butoxide will use 0.49% concentration of pyrethrin). Therefore, we can conclude that piperonyl butoxide as a synergist is effective to reduce the amount of pyrethrin needed to achieve 80% mortality.
+
+# Question 2
+
+## (a) Create a data frame Heart.df that contains the data from the file HeartData.txt. Make sure each of the variables has been specified as the appropriate class. Include the output from the str(Heart.df) and summary(Heart.df) in your answer.
+
+```{r,fig.height=4.2,fig.width=6}
+Heart.df=read.table('HeartData.txt',header=TRUE)
+Heart.df$num=factor(Heart.df$num)
+Heart.df$sex=factor(Heart.df$sex)
+Heart.df$cp=factor(Heart.df$cp)
+Heart.df$fbs=factor(Heart.df$fbs)
+Heart.df$restecg=factor(Heart.df$restecg)
+Heart.df$exang=factor(Heart.df$exang)
+str(Heart.df)
+summary(Heart.df)
+```
+
+## (b) Fit an initial model that relates the response to the explanatory variables and do diagnostics. Adjust your model as appropriate.
+
+```{r,fig.height=4.2,fig.width=6}
+Heart.glm=glm(num~.,family='binomial', data=Heart.df)
+summary(Heart.glm)
+anova(Heart.glm, test='Chisq')
+par(mfrow=c(2,2))
+plot(Heart.glm)
+par(mfrow=c(1,1))
+```
+
+### Comment briefly
+
+The tests shows that our initial model is approximately fine to use and no need to adjust.
+
+## (c) Use dredge to produce a "short list" of promising models.
+
+```{r,fig.height=4.2,fig.width=6}
+options(na.action='na.fail')
+all.fits=dredge(Heart.glm)
+head(all.fits)
+```
+
+## (d) Evaluate the three 'top models' from your short list using cross validation and choose a predictive model. Explain your choice.
+
+```{r,fig.height=4.2,fig.width=6,message=FALSE}
+mod1=get.models(all.fits,1)[[1]]
+mod1
+mod2=get.models(all.fits,2)[[1]]
+mod2
+mod3=get.models(all.fits,3)[[1]]
+mod3
+predfun=function(train.x,train.y,test.x,test.y){
+  new.glm1=glm(train.y~chol + cp + exang + fbs + oldpeak + sex,family=binomial,data=train.x)
+  newpreds1=predict(new.glm1,newdata=test.x,type='response')
+  roc1=roc(response=test.y,predictor=newpreds1)
+  
+  new.glm2=glm(train.y~cp + exang + fbs + oldpeak + sex,family=binomial,data=train.x)
+  newpreds2=predict(new.glm2,newdata=test.x,type='response')
+  roc2=roc(response=test.y,predictor=newpreds2)
+  
+  new.glm3=glm(train.y~chol + cp + exang + fbs + oldpeak + sex + 
+    thalach,family=binomial,data=train.x)
+  newpreds3=predict(new.glm3,newdata=test.x,type='response')
+  roc3=roc(response=test.y,predictor=newpreds3)
+  return(c(roc1$auc, roc2$auc, roc3$auc))
+}
+auc.ests=crossval(predfun,X=Heart.df[,1:10],Y=Heart.df[,11],K=10,B=50,verbose=FALSE)
+auc.ests$stat
+auc.ests$stat.se
+```
+
+### Explain
+
+Because first model has both higher AICc and AUC values, we choose this model as our best predictive model.
+
+## (e) Produce the ROC curve for the model you chose. Comment on the model's predictive ability. Find the value of the threshold c that maximizes sensitivity + specificity.
+
+```{r,fig.height=4.2,fig.width=6,message=FALSE}
+heart.roc=roc(response=Heart.df$num, predictor=fitted.values(get.models(all.fits,1)[[1]]),ci=TRUE)
+plot(heart.roc, print.thres='best', col='blue', auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE, print.auc.cex=1, print.auc=TRUE, auc.polygon.col='yellow', lwd=2)
+```
+
+### Comment briefly
+
+The estimated AUC is 0.916 (very close to 1) with 95% CI of 0.883 to 0.949 and the value of the threshold c=0.282. Therefore, we can conclude that our model is fairly good.
