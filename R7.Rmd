@@ -1,0 +1,203 @@
+---
+title: "STATS 201/8 Assignment 2"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 3pm, Thursday 24th March 2022'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+  pdf_document:
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE,message=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+## Question of interest/goal of the study
+
+We are interested in estimating blood alcohol elimination rates. In particular, we want to know if the currently believed value of 0.15 g/L/h, on average, is supported.
+
+## Read in and inspect the data
+
+```{r}
+alcohol.df=read.csv('alcohol.csv',header=TRUE)
+BloodRate = alcohol.df$BloodRate
+stripchart(BloodRate, method = "stack", pch = 1, main = "Blood alcohol elimination rate (g/L/h)")
+summaryStats(BloodRate)
+```
+
+## Comment on the plot and summary statistics of the data
+
+This plot diagram shows 57 blood alcohol sample elimination rates. The diagram illustrates a right skewness. The median and mean value are very similar which is 0.16 g/L/h and 0.17 g/L/h respectively. Meanwhile, the difference between the maximum and minimum value is 0.13 g/L/h
+
+## Using the t.test function
+
+```{r}
+t.test(BloodRate)
+
+```
+
+## Manual calculation in R
+
+Formula: $T = \frac{\bar{y}-0}{se(\bar{y})}$ and 95% confidence interval $\bar{y} \pm t_{df,0.975} \times se(\bar{y})$
+
+NOTES: The R code `mean(y)` calculates $\bar{y}$, `sd(y)` calculates $s$, the standard deviation of $y$, and the degrees of freedom, $df = n-1$. The standard error, $se(\bar{y}) = \frac{s}{\sqrt{n}}$ and `qt(0.975,df)` gives the $t_{df,0.975}$ multiplier.
+
+```{r}
+# Your manual R calculations go here. 
+alcohol.df=read.csv('alcohol.csv',header=TRUE)
+BloodRate = alcohol.df$BloodRate
+n = length(BloodRate)
+(mean(BloodRate)-0)/(sd(BloodRate)/sqrt(n))
+
+df = n-1
+a = qt(0.975,df)
+mean(BloodRate) + a * sd(BloodRate)/sqrt(n)
+mean(BloodRate) - a * sd(BloodRate)/sqrt(n)
+```
+
+## Using the lm function
+
+```{r}
+Blood.lm=lm(BloodRate ~ 1,data=alcohol.df)
+plot(Blood.lm, which = 1)
+normcheck(Blood.lm)
+cooks20x(Blood.lm)
+summary(Blood.lm)
+confint(Blood.lm)
+```
+
+## Note:
+
+You should get exactly the same results from the manual calculations and using the linear model function as the t.test function. Doing this was to giving you practice using some R code.
+
+## What null hypothesis was t.test() and the linear model actually testing? Comment on how useful this is.
+
+$H_0:$ true mean is equal to 0.
+
+t-test is useful because:
+
+t-test can measure of how different the observed value is away from what we observed if null hypothesis is true.
+
+## Adjust the t.test output to test if the breath alcohol elimination rates is 0.15 on average.
+
+```{r}
+# Keep this as a 2-sided test.
+# Need to compare the mean to 0.15.
+t.test(BloodRate,mu= 0.15)
+
+```
+
+## Method and Assumption Checks
+
+This data comes from a sample of alcohol elimination rates. As it is a single quantitative variable, we have fitted a null linear model - a one sample t-test and confidence interval. The distribution is roughly normally distributed. We have assumed independence since a sample was taken. There are no unduly influential points.
+
+Our preferred model is: $BloodRate_i = \mu + \epsilon_i$ where $\epsilon_i \sim iid ~ N(0,\sigma^2)$
+
+$\mu$ is the average blood alcohol elimination rate.
+
+## Executive Summary
+
+We are interested in estimating blood alcohol elimination rates. In particular, we want to know if the currently believed value of 0.15 g/L/h, on average, is supported.
+
+We estimate the expected blood alcohol elimination rates to be between 0.16 g/L/h and 0.18 g/L/h on average
+
+We have reason to believe that the currently believed value of 0.15 g/L/h, on average, is not supported (P-value ≈ 0).
+
+# Question 2
+
+## Question of interest/goal of the study
+
+We are interested in the relationship between the angle and distance traveled and estimate the travel distance a baseball hit at a 30 degree angle; and what range of angles would lead to the longest distance traveled by the baseball.
+
+## Read in and inspect the data:
+
+```{r,fig.height=4,fig.width=6}
+baseball.df=read.table(file='baseball.txt', header = TRUE)
+plot(Distance ~ Angle, data = baseball.df)
+```
+
+## Comment on the plot
+
+This scatter plot shows a non-linear relationship between the angle and distance traveled of baseball. We’ll need to fit a linear model and scrutinize the residual plot to verify the extent of the curvature.
+
+## Comment on why a quadratic model is appropriate for this data.
+
+The data looks strong curvature so a quadratic term is appropriate for the linear model.
+
+## Model fitting and checks.
+
+```{r,fig.height=3.5,fig.width=6}
+baseball.df=read.table(file='baseball.txt', header = TRUE)
+DistanceAngle.fit = lm(Distance ~ Angle, data = baseball.df)
+plot(DistanceAngle.fit, which = 1) 
+
+DistanceAngle.fit2 = lm(Distance ~ Angle + I(Angle^2), data = baseball.df)
+plot(DistanceAngle.fit2, which = 1)
+
+normcheck(DistanceAngle.fit2)
+
+cooks20x(DistanceAngle.fit2)
+
+summary(DistanceAngle.fit2)
+
+confint(DistanceAngle.fit2)
+
+```
+
+## Plot the data with your appropriate model superimposed over it. (Keep the added vertical lines.)
+
+```{r,fig.height=4,fig.width=6}
+baseball.df=read.table(file='baseball.txt', header = TRUE)
+plot(Distance ~ Angle, data = baseball.df)
+abline(v=c(seq(15,65,5)), lty=2, col = "gray")
+x = 15:70
+DistanceAngle.fit2 = lm(Distance ~ Angle + I(Angle^2), data = baseball.df)
+lines(x, predict(DistanceAngle.fit2, data.frame(Angle = x)), col = "blue")
+
+```
+
+## Get additional predicted output required
+
+```{r}
+DistanceAngle.fit2 = lm(Distance ~ Angle + I(Angle^2), data = baseball.df)
+predDistance.df = data.frame(Angle = c(30))
+predict(DistanceAngle.fit2, predDistance.df, interval = "confidence")
+
+```
+
+## Method and Assumption Checks
+
+The scatter plot of Distance vs Angle suggested curvature in the relationship.
+
+The Residuals vs Fitted plot shows a fairly constant scatter but has strong curvature so quadratic term is added to the linear model.
+
+Our final model is:
+
+$Distance_i = \beta_0 + \beta_1 \times Angle_i + \beta_2 \times Angle_i^2 + \epsilon_i$ where $\epsilon_i \sim iid ~ N(0,\sigma^2)$
+
+Our model explained 97% of the variability in distance traveled of baseball.
+
+## Executive Summary (See additional note on question sheet.)
+
+We are interested in the relationship between the angle and distance traveled and estimate the travel distance a baseball hit at a 30 degree angle; and what range of angles would lead to the longest distance traveled by the baseball.
+
+The relationship between expected distance traveled by the baseball and angle modeled as quadratic.
+
+The longer distance in expected baseball traveled as degree angle increased whereas when the angle increases to a turning point, the shorter distance in expected baseball traveled as degree angle increased. The interval of a turning point is around 40 to 45 degree angle.
+
+For hitting baseball at 30 degree angle, the traveled distance will between 249.0 and 258.5 in feet
+
+We estimate that the range between 40 and 45 degree angle would lead to the longest distance traveled by the baseball.

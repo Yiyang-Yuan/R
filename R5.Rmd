@@ -1,0 +1,175 @@
+---
+title: "STATS 201/8 Assignment 4"
+author: 'Yiyang Yuan yyua260'
+date: 'Due Date: 3pm Thursday 12th May'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    number_sections: yes
+  pdf_document: 
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+```{r setup, echo=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+
+## Question of interest/goal of the study
+
+It was of interest to build a model to explain the number of units sold using the amount spent on TV advertising.
+
+## Inspect the data
+
+```{r,fig.height=5,fig.width=8}
+Sales.df=read.csv("Sales.csv", stringsAsFactors = TRUE)
+Sales.df$TV <- factor(Sales.df$TV, levels = c("High","Medium","Low"))
+
+plot(Sales~TV,main="Sales by TV spend",horizontal=TRUE,data=Sales.df)
+summaryStats(Sales~TV, data=Sales.df)
+
+plot(log(Sales)~TV,main="log(Sales) by TV spend",horizontal=TRUE,data=Sales.df)
+summaryStats(log(Sales)~TV, data=Sales.df)
+```
+
+## Comment on plots and summary statistics
+Inspection suggests that the sales for high TV are centered higher than other two types of TV. Sales for high and medium TV have similar spread out whereas both TV are more spread out than that of sales for low TV.
+Sales for low TV also contains one outer point.
+
+Logging the data has greatly reduced the difference in variability among three groups but sales for high TV are still centered higher than other two types of TV.
+
+## Fit an appropriate linear Model and Check Assumptions 
+
+```{r,fig.height=4,fig.width=6}
+Sales.df=read.csv("Sales.csv", stringsAsFactors = TRUE)
+Sales.df$TV <- factor(Sales.df$TV, levels = c("High","Medium","Low"))
+sales.fit = lm(Sales~TV, data=Sales.df)
+plot(sales.fit, which = 1)
+
+sales.fit2 = lm(log(Sales)~TV, data=Sales.df)
+plot(sales.fit2, which = 1)
+
+normcheck(sales.fit2)
+
+cooks20x(sales.fit2)
+
+anova(sales.fit2)
+
+summary(sales.fit2)
+
+summary1way(sales.fit2)
+
+multipleComp(sales.fit2)
+
+exp(multipleComp(sales.fit2))
+
+```
+
+## Method and Assumption Checks 
+We want to compare the sales value with three different TV type(Low, Median, High), a grouping variable with three-levels. So, we will want to fit a linear model. However, the plot of Sales vs TV revealed that the data for all three groups are right-skewed and higher centered group having higher variability. Hence, we logged Sales. The plot of log(Sales) vs TV show visible improvement. So, we use logged mode.
+
+All model assumptions were satisfied.
+
+Our final model is:
+
+$log(Sales_i) = \beta_0 + \beta_1 \times TV2_i + \beta_2 \times TV3_i + \epsilon_i$ 
+
+where $TVX_i$ is 1 if the $i$th company had high TV advertising and 0 otherwise, and $\epsilon_i \sim iid ~ N(0,\sigma^2)$.
+
+Our model explained 43% of the total variability in (log)Sales.
+
+## Executive Summary
+Researchers were interested in comparing the number of units sold using the amount spent on advertising.
+
+We have strong extremely evidence that the number of units sold depends on type of TV.
+
+We see that the effect of all three groups show the same situation.
+
+-Sales for High TV is 1.10 and 1.33 in 1,000s units higher than that of Medium TV
+
+-Sales for High TV is 1.45 and 1.78 in 1,000s units higher than that of Low TV
+
+-Sales for Medium TV is 1.19 and 1.48 in 1,000s units higher than that of Low TV
+
+In conclusion, High TV shows more popular than other two types of TV, Medium TV shows more popular than Low TV.
+
+# Question 2
+
+
+## Question of interest/goal of the study
+It was of interest to build a model to explain which section a company should advertise their new sports product on each weekday.
+
+
+## Read in and inspect the data
+
+```{r,fig.height=5,fig.width=8}
+advertise.df=read.csv("advertise.csv", stringsAsFactors=TRUE)
+head(advertise.df)
+
+interactionPlots(Response ~ Section + Day, data=advertise.df)
+
+interactionPlots(Response ~ Day + Section, data=advertise.df)
+```
+
+## Comment on the plot
+An interaction is suggested because of the non-parallel lines. The Response for all three section of newspapers increases from Thursday to Friday with different rate slopes. The Response for Busin decreases and Sport increases from Monday to Thursday. Meanwhile, the Response for News increases from Monday to Tuesday but then it continuous to decrease until Thursday.
+
+## Fit model and check assumptions
+
+```{r,fig.height=3.5,fig.width=5}
+advertise.df=read.csv("advertise.csv", stringsAsFactors=TRUE)
+adv.fit=lm(Response ~ Day * Section, data=advertise.df)
+
+eovcheck(adv.fit)
+
+normcheck(adv.fit)
+
+cooks20x(adv.fit)
+
+anova(adv.fit)
+
+summary(adv.fit)
+
+summary2way(adv.fit, page = "interaction")
+
+```
+
+
+## Methods and assumption checks
+We have two explanatory factors, Day and Section, and one numeric response Response. The interaction plots suggested an interaction so we fitted a two-way ANOVA model with interaction between Day and Section. The interaction term was significant (P-value = 1.032e-08).
+
+The model assumptions were satisfied.
+
+Our final model is:
+$Response_{ijk} = \mu + \alpha_i +\beta _j + \gamma_{ij} + \epsilon_{ijk}$
+
+where $\mu$ is the overall mean number of inquiries, $\alpha_i$ is the effect of the $i$th day, $\beta _j$ is the effect of the $j$th section, $\gamma_{ij}$ is the interaction effect for the combination of the $i$th day and the $j$th section,
+and $\epsilon_{ijk} \sim iid ~ N(0,\sigma^2)$.
+
+Our model explained 81% of the variability in the inquiry(Response).
+
+## Executive Summary
+
+We wish to determine whether number of inquiries on a day of a week depend on the section of newspaper advertised in (and vice-versa).
+
+We found the effect that section had on the number of inquires(response) depend on the day level, so we could not look at the effects of section and day individually.
+
+Monday: We have very strong evidence that the number of inquires(response) for Business greater than that of other two sections.
+
+Tuesday: We have very weak evidence that the number of inquires(response) for News greater than that of Business section and some evidence that the number of inquires(response) for News greater than that of Sports section.
+
+Wednesday: We have very weak evidence that the number of inquires(response) for News greater than that of Business section and strong evidence that the number of inquires(response) for News greater than that of Sports section.
+
+Thursday: We have very weak evidence that the number of inquires(response) for Business greater than that of Sports section and strong evidence that the number of inquires(response) for Business greater than that of News section.
+
+Friday: We have strong evidence that the number of inquires(response) for News greater than that of Business section and very strong evidence that the number of inquires(response) for News greater than that of Sports section.

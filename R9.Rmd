@@ -1,0 +1,246 @@
+---
+title: "STATS 330 Assignment 1"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 6pm, 10th August 2023'
+output:
+  pdf_document:
+    number_sections: yes
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE, message=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+## (a) Question of interest/goal of the study
+
+### (i) Plot these data on a log-log scale and comment briefly:
+
+```{r,fig.height=4.2,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+plot(log(Mass) ~ log(Diameter), data = Moons.df)
+```
+
+### Comment on the plot
+
+This is a scatter plot of log(Mass) over log(Diameter). The log-log scale the plot reveals mostly a positive linear relationship and it is very slight curvature.
+
+### (ii) Fit an appropriate simple linear regression model to data these and comment on its fit and remedy any problems you may encounter (if any).
+
+```{r,fig.height=3.6,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+mod.fit=lm(log(Mass)~log(Diameter),data=Moons.df)
+plot(mod.fit, which=1)
+summary(mod.fit)
+round(100*summary(mod.fit)$r.sq,1)
+```
+
+### Comment on the plot
+
+There is a distinct non-straight pattern in the plot, but does a good job with some slight curvature detected. As there are so small relative ($\pm 1$) to the original units ($\pm 7$), and the model explains 98.3% of the variance in mass. Therefore we ignore it.
+
+### (iii) Superimpose the predicted values and their upper and lower 95% bounds on the plot above
+
+```{r,fig.height=4.2,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+mod.fit2 = lm(log(Mass)~log(Diameter),data=Moons.df)
+x=sort(Moons.df$Diameter)
+preds=predict(mod.fit2, newdata=data.frame(Diameter=x),interval = "prediction")
+plot(log(Mass) ~ log(Diameter), data = Moons.df)
+lines(log(x), preds[,"fit"], col="red", lty=2)
+lines(log(x), preds[,3], col="blue", lty=2)
+lines(log(x), preds[,2], col="blue", lty=2)
+```
+
+### (iv) assume that the SLR model fitted above is adequate. Test the hypothesis this that planet's or dwarf planet's mass is related to the cube of its diameter.
+
+```{r,fig.height=4.2,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+mod.fit3=lm(log(Mass)~log(Diameter),data=Moons.df)
+normcheck(mod.fit3)
+cooks20x(mod.fit3)
+summary(mod.fit3)
+exp(confint(mod.fit3))
+100 * (exp(confint(mod.fit3)) - 1)
+```
+
+### Executive Summary
+
+We have a p-value of 4.59e-11, so there is strong evidence against this null hypothesis; there appears to be a relationship that planet's or dwarf planet's mass is related to the cube of its diameter.
+
+## (b) According to Physicists the inner planets are rocky and so have higher density, followed by lower density gas giants and then, ice giants which have slightly higher density compared to the gas giant planets. Here, we will investigate how they came to these conclusions.
+
+### (i) Create a new variable Density and append it to the data frame Moons.df. To be consistent make everything relative to Earth's density which will made to have the value 1. Inspect these data.
+
+```{r}
+# Your manual R calculations go here.
+Moons.df = read.csv('Moons.csv')
+Mass = Moons.df$Mass
+Diameter = Moons.df$Diameter
+Radius =  1/2*Diameter
+Volume = 4/3*pi*Radius^3
+Moons.df$Density = Mass/Diameter^3
+head(Moons.df)
+```
+
+### (ii) Plot this data on the log-log scale and superimpose the names of these plants and dwarf planets.
+
+```{r,fig.height=4.2,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+Mass = Moons.df$Mass
+Diameter = Moons.df$Diameter
+Moons.df$Density = Mass/Diameter^3
+plot(log(Density) ~ log(Distance), data = Moons.df)
+text(log(Density) ~ log(Distance), labels=substr(Name,1,10), col="blue", data=Moons.df, cex=0.5, font=2)
+```
+
+### (iii) Comment on what you find and if it is consistent with the claims made by Physicists above.
+
+According to this graph, it can be observed that the density of planets decreases as their distance from the sun increases. Meanwhile, some plants made of rocky material like Earth, Mercury and Venus has higher density whereas plants made of gas material like Saturn(hydrogen and helium) has lower density. Therefore, it is consistent with the claims made by Physicists above.
+
+## (c) Using only the variables Mass, Diameter and Distance we wish you to:
+
+### (i) Fit an initial model (either Normal, Poisson or Binomial via glm) to predict the number of moons a plane or dwarf planet using these three explanatory variables Mass, Diameter and Distance. Comment briefly.
+
+```{r,fig.height=3.6,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+mod.gfit=glm(Moons~log(Mass)+log(Diameter)+log(Distance), family=poisson, data=Moons.df)
+summary(mod.gfit)
+normcheck(mod.gfit)
+model.matrix(mod.gfit)
+```
+
+### Comment
+
+Because we are counting number of moons a plane or dwarf planet has, binomial and normal is not appropriate here. We need to fit a poisson model.
+
+We have a p-value of 0.0179, so there is strong evidence against this null hypothesis; there appears to be a relationship between number of moons and the mass of plane or planet. We have a p-value of 1.08e-05, so there is strong evidence against this null hypothesis; there appears to be a relationship between number of moons and the diameter of plane or planet from the sun. Then we still have a p-value of 0.28, so there is an evidence against this null hypothesis; there appears to be a relationship between number of moons and the distance of planet or dwarf planet from the sun.
+
+### (ii) Address any issues that you may encounter with this initial model such as fit and underlying assumptions to produce the simplest model possible. Briefly comment on how you came to this final model.
+
+```{r,fig.height=3.6,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+mod.gfit=glm(Moons~log(Mass)+log(Diameter)+log(Distance), family=poisson, data=Moons.df)
+predict(mod.gfit)
+exp(predict(mod.gfit))
+as.integer(exp(predict(mod.gfit)))
+```
+
+### Comment
+
+It is impossible that a plane or dwarf planet has negative and non-integer moons by using three explanatory variables: Mass, Diameter and Distance. Therefore, we need to use as.integer() function and exponential the model to get all positive integer number.
+
+### (iii) Give a formulae for predicting the mean number of moons a planet or dwarf planet from the last analysis.
+
+```{r,fig.height=3.6,fig.width=6}
+Moons.df = read.csv('Moons.csv')
+mod.gfit=glm(Moons~log(Mass)+log(Diameter)+log(Distance), family=poisson, data=Moons.df)
+mean(exp(predict(mod.gfit)))
+as.integer(mean(exp(predict(mod.gfit))))
+```
+
+# Question 2
+
+## (a) Submit the following code and comment on the plot. Explain how we get the features that you observe.
+
+```{r,fig.height=3.6,fig.width=6}
+set.seed(123)
+nx=1e4
+x=seq(1.25,5, length=nx)
+y=rpois(nx, lambda=exp(0+1*x))
+plot(y~x)
+```
+
+### Explaination
+
+For set.seed(123): This sets the random number generator seed to 123.
+
+For x=seq（1.25,5，length=nx): This generates a sequence of evenly spaced numbers from 1.25 to 5 with a total length of nx.
+
+For y=rpois(nx, lambda=exp(0+1\*x)): This generates a random Poisson-distributed variable y with a length of nx. lambda in the rpois() function is set to exp(0 + 1\*x) and it calculates the exponential of 1\*x, which means y will be generated from a Poisson distribution with a mean that increases linearly with x.
+
+For plot(y\~x): This creates a scatter plot of y against x.
+
+So, the entire code generates a random Poisson-distributed variable y, which depends on x. Then, it plots the relationship between x and y in a scatter plot. Because we use the seed() function, we will get the same plot every time when run this code.
+
+## (a) Fit an appropriate model the relationship y ∼ x. Comment of the residual plot you obtain. Comment on confidence interval for the slope and intercept and how it relates (or not) to the simulation code.
+
+```{r,fig.height=3.6,fig.width=6}
+set.seed(123)
+nx=1e4
+x=seq(1.25,5, length=nx)
+y=rpois(nx, lambda=exp(0+1*x))
+model.fit = glm(y ~ x, family = poisson)
+residual.fit=lm(y ~ x)
+plot(residual.fit, which=1)
+summary(model.fit)
+confint(model.fit)
+```
+
+### Comment
+
+There is a non-distinct curve pattern in the plot so that it does a good job with some slight curvature detected.
+
+We have a p-value of <2e-16, so there is strong evidence against this null hypothesis; there appears to be a relationship between x and y.
+
+We estimate that the average y variable to x variable is between -0.025 and 0.007.
+
+We estimate that, for every 1 x-variable increase, the average y-variable increase between 0.998 and 1.006.
+
+## (b) Submit the following code and comment on the plot. Explain how we get the features that you observe.
+
+```{r,fig.height=3.6,fig.width=6}
+set.seed(345)
+x=seq(-5.5, 5.5, length=nx)
+y=rbinom(n=nx,size=50, prob=exp(0+1*x)/(1+exp(0+1*x)))
+plot(I(y/50)~x)
+```
+
+### Explaination
+
+For set.seed(345): This sets the random number generator seed to 345.
+
+For x=seq(-5.5, 5.5, length=nx): This generates a sequence of evenly spaced numbers from -5.5 to 5.5 with a total length of nx.
+
+For y=rbinom(n=nx,size=50, prob=exp(0+1\*x)/(1+exp(0+1\*x))): This generates a random binomial variable to show probability of increases linearly with x.
+
+For plot(I(y/50)~x): This creates a scatter plot. The I() function is used to prevent R treat expression y/50 as a formula so that it y/50 can be treat as an independent variable.
+
+So the entire code generates a sequence of numbers x, then calculates the probabilities based on the linear relationship with x. Finally, it generates random binomial observations using those probabilities. The scatter plot shows the relationship between the proportion and x in the generated data.
+
+## (b) Fit an appropriate model the relationship y ∼ x. Comment of the residual plot you obtain. Comment on confidence interval for the slope and intercept and how it relates (or not) to the simulation code.
+
+```{r,fig.height=3.6,fig.width=6}
+set.seed(345)
+x=seq(-5.5, 5.5, length=nx)
+y=rbinom(n=nx,size=50, prob=exp(0+1*x)/(1+exp(0+1*x)))
+data = data.frame(y_probability = y/50, x)
+model2.fit = glm(cbind(y,50) ~ x, family = binomial, data = data)
+residual.fit=lm(y ~ x)
+plot(residual.fit, which=1)
+summary(model2.fit)
+confint(model2.fit)
+```
+
+### Comment
+
+There is a distinct non-straight pattern in the plot so that it does a good job with some curvature detected.
+
+We have a p-value of <2e-16, so there is strong evidence against this null hypothesis; relationship between the proportion and x.
+
+We estimate that the average y variable to x variable is between -1.10 and -1.12.
+
+We estimate that, for every 1 x-variable increase, the average y-variable increase between 0.313 and 0.317.

@@ -1,0 +1,205 @@
+---
+title: "STATS 201/8 Assignment 3"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 3pm, Thursday 7th April'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+  pdf_document:
+    number_sections: yes
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+> Note: For written answers, you may need to type `\$` instead of `$` in RStudio (This prevents R Markdown interpreting your written answers as equations).
+
+## Question of interest/goal of the study
+
+We were interested in quantifying the difference in rent between the Auckland and West Coast regions of New Zealand.
+
+## Read the data.
+
+```{r,fig.height=4.2}
+rent.df=read.csv(file='rent_2regions.csv', header = TRUE, stringsAsFactors = TRUE)
+```
+
+## Inspect the data:
+
+```{r,fig.height=4,fig.width=6}
+stripchart(Rent~Region,main="Rent by Region",method="stack",pch=1,data=rent.df)
+summaryStats(Rent~Region, data=rent.df)
+
+stripchart(log(Rent)~Region,main="log(Rent) by Region",method="stack",pch=1,data=rent.df)
+summaryStats(log(Rent)~Region, data=rent.df)
+
+```
+
+## Comment on plots and summary statistics
+
+The first plot shows the difference in rent between the Auckland and West Coast regions of New Zealand with same sample size 341. Both regions have right skewness but the mean and median rents in Auckland are higher. Meanwhile, Auckland plot shows more spread and higher std.dev than west coast region.
+
+The second plot shows the difference in logged rent between the Auckland and West Coast regions of New Zealand. The spread of Rent plot in Auckland become narrower and spread of Rent plot in West Coast become wider than original plot.
+
+## We will fit models to the log-transformed data and to the untransformed data. Why aren't we concerned about the lack of Normality for using either an untransformed or log model?
+
+Before we fit models to the log-transformed and untransformed data, we only consider multiplicate effect of the explanatory variables, right skewness of the variability and funnel effect in the plot of residuals vs fitted values. Therefore, lack of Normality don't need to be concerned.
+
+## Fit linear model on the untransformed data and check assumptions. Generate confidence intervals for the model.
+
+```{r,fig.height=3.8}
+rent.df=read.csv(file='rent_2regions.csv', header = TRUE, stringsAsFactors = TRUE)
+RentRegion.fit = lm(Rent ~ Region, data = rent.df)
+plot(RentRegion.fit, which = 1)
+
+normcheck(RentRegion.fit)
+
+cooks20x(RentRegion.fit)
+
+summary(RentRegion.fit)
+
+confint(RentRegion.fit)
+```
+
+## Interpret BOTH confidence intervals from above model (as if for an Executive Summary)
+
+Auckland: We estimate the rent for Auckland has a confident interval between \$369.85 and \$389.49 on average. 
+
+West Coast: The negative value of confidence interval means that the rent for West Coast is lower than that of the Auckland between \$176.31 and \$204.09 on average.
+
+## Fit linear model on the logged data and check assumptions. Generate confidence intervals for the model.
+
+```{r,fig.height=3.8}
+rent.df=read.csv(file='rent_2regions.csv', header = TRUE, stringsAsFactors = TRUE)
+RentRegion.fit2 = lm(log(Rent) ~ Region, data = rent.df)
+plot(RentRegion.fit2, which = 1)
+
+normcheck(RentRegion.fit2)
+
+cooks20x(RentRegion.fit2)
+
+summary(RentRegion.fit2)
+
+confint(RentRegion.fit2)
+
+```
+
+## Interpret BOTH confidence intervals from above model (as if for an Executive Summary).
+
+Auckland: We estimate the median rent for Auckland has a confident interval between \$350.42 and \$375.66. 
+
+West Coast: We estimate the median rent for West Coast is lower than that of Auckland between 0.66% and 0.76%.
+
+## Write the equation for EACH of the two models fitted (as if for Methods and Assumption Checks). 
+
+untransformed: $Rent_i = \beta_0 + \beta_1 \times Region_i + \epsilon_i$ where $\epsilon_i \sim iid ~ N(0,\sigma^2)$, 
+$Region_i$ = 1 if region is Auckland, $Region_i$ = 0 if region is West Coast.
+
+logged: $log(Rent_i) = \beta_0 + \beta_1 \times Region_i + \epsilon_i$ where $\epsilon_i \sim iid ~ N(0,\sigma^2)$, 
+$Region_i$ = 1 if region is Auckland, $Region_i$ = 0 if region is West Coast.
+
+## Select which model you would use to report in the story. Justify your choice.
+
+We want to compare the rent with two different regions(Auckland and West Coast), a grouping variable with two-levels. So, we will want to fit a linear model. However, the plot of rent vs region revealed that the data were right-skewed. Hence, we logged rent. The plot of log(rent) vs region show visible improvement. So, we choose second logged model.
+
+# Question 2
+
+## Question of interest/goal of the study
+
+We are interested in quantifying the initial height and rate of decline for the froth on top of two brands of beer.
+
+## Read in and inspect the data:
+
+```{r,fig.height=5,fig.width=6}
+beer.df=read.csv(file='beer.csv', header = TRUE, stringsAsFactors = TRUE)
+
+plot(Height~Time,data=beer.df,ylab='Height(cm)',xlab='Time (seconds)',
+     main = "Height of the beer froth by Time",
+     pch  = ifelse(Brand == 'B', 'B', 'E'),col = ifelse(Brand == 'E', 'blue', 'red'))
+legend('topright',c('Erdinger Weissbie','Budweiser Budvar'),col=c("blue","red"),pch=c('E', 'B'))
+
+plot(log(Height)~Time,data=beer.df,ylab='log(Height)',xlab='Time (seconds)',
+     main = "log(Height) of the beer froth by Time",
+     pch  = ifelse(Brand == 'B', 'B', 'E'),col = ifelse(Brand == 'E', 'blue', 'red'))
+legend('topright',c('Erdinger Weissbie','Budweiser Budvar'),col=c("blue","red"),pch=c('E', 'B'))
+```
+
+## Comment on plots
+
+The first scatter plot of time versus beer height shows negative non-linear relationship within two brand group ('E' for Erdinger Weissbier and 'B' for Budweiser Budvar), Two brand group trend with similar rate.
+
+The second scatter plot of time versus logged beer height shows negative linear relationship within two brand group and two brand group trend with different rate.
+
+## Why should we be using `log(Height)` instead of `Height` for this analysis?
+
+The scatter plot shows that the groups are comparable with non-linear relationship so we use `log(Height)` instead of `Height` model for this analysis.
+
+## Fit an appropriate linear Model and Check Assumptions 
+
+
+```{r,fig.height=4,fig.width=6}
+beer.df=read.csv(file='beer.csv', header = TRUE, stringsAsFactors = TRUE)
+HeightTimeBrand.fit = lm(log(Height) ~ Time * Brand, data = beer.df)
+plot(HeightTimeBrand.fit, which = 1)
+
+normcheck(HeightTimeBrand.fit)
+
+cooks20x(HeightTimeBrand.fit)
+
+summary(HeightTimeBrand.fit)
+
+exp(confint(HeightTimeBrand.fit))
+
+beer.df$Brand= relevel(beer.df$Brand, ref = 'B')
+HeightTimeBrand.fit2 = lm(log(Height) ~ Time * Brand, data = beer.df)
+100*(exp(60*confint(HeightTimeBrand.fit2, 'Time')) -1)
+exp(coef(HeightTimeBrand.fit2))
+
+beer.df$Brand= relevel(beer.df$Brand, ref = 'E')
+HeightTimeBrand.fit3 = lm(log(Height) ~ Time * Brand, data = beer.df)
+100*(exp(60*confint(HeightTimeBrand.fit3, 'Time')) -1)
+exp(coef(HeightTimeBrand.fit3))
+
+```
+
+
+## Method and Assumption Checks 
+As we have two explanatory variables, one numeric and one factor, we have fitted a linear model that used different intercept and slopes for each brand group. We could not drop the interaction term (P-value ≈ 0).
+
+All model assumptions were satisfied.
+
+Our final model is:
+
+$log(Height_i) = \beta_0 + \beta_1 \times Time_i + \beta_2 \times Brand_i + \beta_3 \times Brand_i \times Time_i + \epsilon_i$ where $\epsilon_i \sim iid ~ N(0,\sigma^2)$, 
+$Brand_i$ = 1 if brand is E for Erdinger Weissbier, $Brand_i$ = 0 if brand is B for Budweiser Budvar.
+
+Our model explained a modest 99% of the variability in brand’s beer log(height) froth.
+
+## Executive Summary (Remember to answer ALL the questions asked.)
+
+We are interested in quantifying the initial height and rate of decline for the froth on top of two brands of beer.
+
+There was a clear linear relationship between logged Height and Time for each brand group, but two brand groups have different decline rate and initial height.
+
+We estimate that the initial height of B is 13.89cm and the initial height of E is 16.67cm.
+
+For every minute, we estimate that the height of Brand B will decline somewhere between 31.20 and 32.81cm and the height of Brand E will decline somewhere between 17.76 and 19.69cm on average.
+
+
+

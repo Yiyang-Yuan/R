@@ -1,0 +1,208 @@
+---
+title: "STATS 201/8 Assignment 5"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 3pm Thursday 26th May'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  pdf_document: 
+    number_sections: yes
+  word_document: 
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE, warning=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+## Questions of Interest
+
+It was of interest to see how the total number of eggs produced per day changes over time.
+
+## Read in and inspect the data:
+
+```{r,fig.height=5,fig.width=7,warning=FALSE}
+Goodeggs.df=read.csv("Goodeggs.csv",header=TRUE)
+plot(Totaleggs~Day, data=Goodeggs.df)
+```
+
+## Comment on the plot of the data
+
+This plot suggests that there is an increasing and then decreasing relationship between Total number of eggs produced and number of Days start counting when the first eggs was produced.
+
+## Fit and check model over the range days 18 to 42 only
+
+```{r,message = FALSE}
+Goodeggs.gfit = glm(Totaleggs ~ Day, family = poisson, data=Goodeggs.df[(18:42),])
+plot(Goodeggs.gfit, which = 1)
+
+summary(Goodeggs.gfit)
+
+Goodeggs.gfit2 = glm(Totaleggs ~ Day + I(Day^2), family = poisson, data=Goodeggs.df[(18:42),])
+summary(Goodeggs.gfit2)
+
+1 - pchisq(Goodeggs.gfit2$deviance, Goodeggs.gfit2$df.residual)
+
+Goodeggs.gfit3 = glm(Totaleggs ~ Day + I(Day^2), family = quasipoisson, data=Goodeggs.df[(18:42),])
+plot(Goodeggs.gfit3, which = 1)
+
+summary(Goodeggs.gfit3)
+
+Goodeggs.gfit4 = glm(Totaleggs ~ Day, family = quasipoisson, data=Goodeggs.df[(18:42),])
+summary(Goodeggs.gfit4)
+
+exp(confint(Goodeggs.gfit4))
+
+100 * (exp(confint(Goodeggs.gfit4))-1)
+
+```
+
+## Write a single sentence quantifying the effect of an additional day on total egg production during this time frame.
+
+There is a 4.50% to 6.39% rise in the expected number of total eggs for one additional day increase in their magnitude during this time frame.
+
+## Fit and check model on full data
+
+```{r message = FALSE}
+Goodeggs.gfit5 = glm(Totaleggs ~ Day, family = poisson, data=Goodeggs.df)
+plot(Goodeggs.gfit5, which = 1)
+
+summary(Goodeggs.gfit5)
+
+Goodeggs.gfit6 = glm(Totaleggs ~ Day + I(Day^2), family = poisson, data=Goodeggs.df)
+summary(Goodeggs.gfit6)
+
+1 - pchisq(Goodeggs.gfit5$deviance, Goodeggs.gfit5$df.residual)
+
+Goodeggs.gfit7 = glm(Totaleggs ~ Day + I(Day^2), family = quasipoisson, data=Goodeggs.df)
+plot(Goodeggs.gfit7, which = 1)
+
+summary(Goodeggs.gfit7)
+
+predeggs.df = data.frame(Day = c(30,45,60))
+predict(Goodeggs.gfit7, predeggs.df, interval = "confidence")
+
+preds = predict(Goodeggs.gfit7, se.fit = T)
+upper = exp(preds$fit + 1.96*preds$se.fit)
+lower = exp(preds$fit - 1.96*preds$se.fit)
+
+```
+
+## Create a plot of the original data with the model superimposed over it.
+
+```{r,fig.height=5,fig.width=7,warning=FALSE}
+plot(Totaleggs~Day,xlab="Day", ylab="Eggs/Day ", data=Goodeggs.df)
+abline(v=c(seq(0,60,5)), lty=2, col = "gray")
+x = 0:54
+lines(x, predict(Goodeggs.gfit7, data.frame(Day = x), type = "response"), col = "blue")
+lines(Goodeggs.df$Day, upper, col = "blue", lty=2)
+lines(Goodeggs.df$Day, lower, col = "blue", lty=2)
+```
+
+## Methods and Assumption Checks
+
+As the response variable, Totaleggs, is a count, we have fitted a generalized linear model with a Poisson response distribution. However, we found that the residual deviance is much greater than degree of freedom, P-value is very small and the Residuals vs Fitted plot shows unfairly constant scatter and strong curvature. Therefore we conclude that our model is not adequate and we need to use quasipoisson instead of poission. After we use quadratic term to fix our model, our Residuals vs Fitted plot looks well.
+
+All assumptions were satisfied. We can trust the results from Poisson model (P-value ≈ 0)
+
+Our final model is:
+
+$log(\mu_i) = \beta_0 + \beta_1 \times Day_i + \beta_2 \times Day_i^2$
+
+where $\mu_i$ is the mean number of total eggs counts in Day with magnitude $i$ and $Totaleggs_i$(The total number of eggs produced on the day) has a Poisson distribution with mean $\mu_i$. Also, $Day_i$ is a numeric explanatory variable.
+
+## Executive Summary
+
+The research question is to see how the total number of eggs produced per day changes over time.
+
+The relationship between Totaleggs and Day modeled as quadratic.
+
+We found that total number of eggs produced per day increases from day 0 to nearly day 45 and then it decreases after day 45.
+
+------------------------------------------------------------------------
+
+# Question 2
+
+## Questions of interest
+
+Is the average daily proportion of saleable eggs above 95% and is this proportion constant?
+
+## Inspect the data:
+
+```{r,fig.height=5,fig.width=7}
+Goodeggs.df = within(Goodeggs.df, {propSaleable = Saleable/Totaleggs})
+plot(propSaleable~Day, data=Goodeggs.df, ylab = "Proportion Saleable/Day")
+plot(propSaleable~Day, data=Goodeggs.df[-(1:14),], ylab = "Proportion Saleable/Day")
+```
+
+## Comment on the plot of the data
+
+We can see that as the time of day increases from day 0 to day 55, it follows a curve trend. When we just plot the data ignore first two weeks, most plots show fairly constant and linear relationship with similar Proportion Saleable/Day value.
+
+## Fit and check model
+
+```{r,message = FALSE}
+Goodeggs.df = within(Goodeggs.df, {propSaleable = Saleable/Totaleggs})
+Goodeggs.glm=glm(propSaleable~Day,family=binomial,weight = Totaleggs,data=Goodeggs.df[-(1:14),])
+plot(Goodeggs.glm, which = 1)
+summary(Goodeggs.glm)
+
+1 - pchisq(Goodeggs.glm$deviance, Goodeggs.glm$df.residual)
+
+Goodeggs.glm2=glm(propSaleable~Day,family=quasibinomial,weight = Totaleggs,data=Goodeggs.df[-(1:14),])
+summary(Goodeggs.glm2)
+
+exp(confint(Goodeggs.glm2))
+
+100 * (1- exp(confint(Goodeggs.glm2, 'Day')))
+
+```
+
+## Create a plot of the original data with the model superimposed over it.
+
+```{r,fig.height=5,fig.width=7}
+plot(propSaleable~Day,xlab="Day", ylab="Proportion Saleable/Day ", data=Goodeggs.df[-(1:14),])
+abline(v=c(seq(0,60,5)), lty=2, col = "gray")
+x = 14:54
+lines(x, predict(Goodeggs.glm, data.frame(Day = x), type = "response"), col = "blue")
+
+```
+
+## Write a single sentence quantifying the effect of an additional day on saleable eggs during this time frame.
+There is a nearly 0.89% rise and 3.68% drop in the expected number of saleable eggs for one additional day increase in their magnitude during this time frame.
+
+## Simplify model
+```{r,message = FALSE}
+
+```
+## Methods and Assumption Checks
+As the response variable is the number of saleable eggs from totaleggs. We fitted a generalized linear model with a binomial response distribution. We found that the residual deviance is greater than degree of freedom and P-value is small, we need to use quasibinomial instead of binomial. Because our Residuals vs Fitted plot shows fairly constant scatter, we don't need to simply our model.
+
+The check of residual deviance had P-value = 0.236. We may trust the results from this binomial model.
+
+Our final model is:
+
+$log(Odds_i) = \beta_0 + \beta_1 \times Day_i$
+
+where $Odd_i$ is the odds of retention at Day $i$.
+
+## Executive Summary
+The research question is to see whether the average daily proportion of saleable eggs above 95% and whether this proportion constant.
+
+P(Saleable-lower) = 10.35/(1 + 10.35) * 100 ≈ 91.2%
+
+P(Saleable-upper) = 59.51/(1 + 59.51) ≈ 98.3%
+
+P(Average) = (91.2+98.3)/2 ≈ 94.8%
+
+The average daily proportion of saleable eggs is 94.8% which is lower than 95% and we can conclude that this proportion may constant because the original scatter plot had a nearly straight line trend. 

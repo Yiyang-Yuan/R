@@ -1,0 +1,220 @@
+---
+title: "STATS 330 Assignment 2"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 23:59pm, 24th August 2023'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+  pdf_document:
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE, message=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+## (a) Plot the number of mass killing incidents per year over this period of time. Comment briefly. Include on your plot a vertical dashed line for the year COVID-19 lock-downs occurred in the USA.
+
+```{r,fig.height=4.2,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+plot(masskill~year,data=masskill.df)
+abline(v=c(2020), lty=2, col = "gray")
+```
+
+### Comment on the plot
+
+We can see from this graph that the number of mass killing incidents in the USA constant before 2000 and then increased rapidly until 2019. Then it has a strong decline and follow by a rapid increase for the year COVID-19.
+
+## (b) Plot the population of the USA over this period of time. Comment briefly on how the population is changing over this period of time.
+
+```{r,fig.height=3.6,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+plot(popn~year,data=masskill.df)
+```
+
+### Comment on the plot
+
+We can see from this graph that the overall population of the USA is on the rise, with a fairly linear increased over the period of year about \Sexpr{round(coef(lm(popn~year, data=masskill.df))[2],2)} million per year.
+
+## (c) Make a plot that shows the number of mass killing per year, per 100 million people. Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+group = (masskill.df$masskill/(masskill.df$popn/100))
+plot(I(group)~year,data=masskill.df)
+abline(v=c(2020), lty=2, col = "gray")
+```
+
+### Comment on the plot
+
+We can see that the trends and distribution presented in this graph is very similar to plot in (a). Therefore, we can conclude that in recent years, it shows a strong decline since 2020 and follow by a rapid increase after COVID-19.
+
+## (d) We will assume these data are independent of each other for the sake of simplicity. Is this a reasonable thing to do? Explain, briefly, why or why not.
+
+This is not very reasonable. We know that all data collected there over a period of time, human behaviors will affect population and total number of mass killings change. Therefore, there are lots of unpredictable effects that can affect population and the total number of mass killings over year, we cannot assume these data as an independent variable.
+
+## (e) Fit the following glm model for the mass killing count. Describe each component in the model statement and what it is designed to account for.
+
+```{r,fig.height=4.2,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+MK.fit = glm(masskill ~ I(year - 1982)*I(year>=2020), subset = (year!=2023),family = "poisson", offset = log(popn/100),data = masskill.df)
+plot(MK.fit, which=1)
+1-pchisq(MK.fit$deviance, MK.fit$df.residual)
+100*(exp(coef(MK.fit))-1)
+anova(MK.fit,test = "Chisq")
+```
+
+### Explaination
+
+I(year - 1982): This accounts increase since 1982 from the "year" variable and representing whether the year is greater than or equal to 2020.
+
+I(year\>= 2020): This is dummy variable for the intercept, it accounts the decline for year 2020(COVID).
+
+subset = (year != 2023): This filters out the data for the year 2023. It's excluding this year from the analysis.
+
+family = "poisson": Poisson distribution is used, which is used for count data(modelling the log of mean rate).
+
+offset = log(popn/100): This accounts for the change of population from 1982 to now, and it shows the rate of year per 100 million people for better comparison.
+
+The goal is designed to account for how the variables(different year period) relate to the number of mass killings.
+
+## (f) State, mathematically, the model for the count of mass killings that you are fitting here.
+
+$log(MassKill_i)=\beta_0+\beta_1\times(year_i)+\beta_2\times(D2020)+\beta_3\times(D2020)\times(year_i)+\log(popn_i)$ where $MassKill_i$ is the mass killings count for specific year since 1982, $popn_i$ is the population of US in 100 millions for specific year since 1982, $year_i$ is the year of observation $i$, $D2020=1$ if year is 2020 otherwise $D2020=0$, $\beta_0, \beta_1, \beta_2, \beta_3$ are estimated coefficients and $\beta_2$ measures population decline by COVID. 
+
+## (g) Comment briefly on what it the summary output reveals, having checked that the Poisson model is an adequate description of these data.
+
+We have very strong evidence that the Poisson model is correct with p-value=0.471.
+
+The residual plot looks fine with some curvature patterns.
+
+The rate of increase over year is significant from 0.
+
+The rate of mass killing per year, per 100 million people increases 6.24% per year.
+
+The mean rate of mass killing per year, per 100 million people dropped by 100% in 2020(COVID) compared to the mean number predicted in 2019.
+
+We use anova to check all relationships between different year periods for this model.
+
+For I(year - 1982): It represents the main effect of the difference between the year and 1982. We can conclude that the year has a significant effect on the count of mass killings with very small p-value (5.869e-12).
+
+For I(year \>= 2020): It represents the main effect of the difference between the year and year which greater than or equal to 2020. We can conclude that this effect is not significant on the count of mass killings with p-value\<0.5 (0.165091).
+
+For I(year - 1982):I(year \>= 2020): It represents the interaction effect between the year 1982 and whether the year is greater than or equal to 2020. We can conclude that this interaction effect is significant on the count of mass killings with small p-value (0.009791).
+
+## (h) Plot the data again with this model's expected counts superimposed along with the 95% confidence interval band for these expected values. Comment, briefly, on how well your model fits these data.
+
+```{r,fig.height=4.2,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+MK.fit = glm(masskill ~ I(year - 1982)*I(year>=2020),family = "poisson", offset = log(popn/100),data = masskill.df)
+preds = predict(MK.fit, se.fit = TRUE)
+expected_counts = preds$fit
+a = preds$se.fit
+b = 1.96
+lower = expected_counts - a * b
+upper = expected_counts + a * b
+plot(masskill ~ year, data = masskill.df, xlab = "Year", ylab = "Mass Killings")
+lines(masskill.df$year, exp(expected_counts), col = "red", lty = 2)
+lines(masskill.df$year, exp(upper), col = "blue", lty = 2)
+lines(masskill.df$year, exp(lower), col = "blue", lty = 2)
+```
+
+### Comment on the plot
+
+We can see that the 95% confidence interval fitted model is relatively good. However, the line shows under-fitting from 2017 to 2019 and over-fitting in 2020. Overall our model seems fit well with these data.
+
+## (i) Compute a confidence interval for the mean number of mass killing in 2023 using this model. Assume that the population of the USA is 334,230,000 people. Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+MK.fit= glm(masskill ~ I(year - 1982)*I(year>=2020),subset = (year!=2023), family = "poisson", offset = log(popn/100),data = masskill.df)
+predicted_2023 = predict(MK.fit, data.frame(year = 2023, popn = 334.23), type = "response")
+a = sqrt(predicted_2023)
+b = 1.96
+lower = predicted_2023 - a * b
+upper = predicted_2023 + a * b
+sum = lower + upper
+show(round(sum/2))
+```
+
+### Comment
+
+We can conclude that the the mean number of mass killing in 2023 using this model is rounded to 28 millions people.
+
+## (j) One of the features of the Poisson distribution is that if the interval of interest changes, so to does the rate value change (all other things being equal). For example, a rate value per year can be halved to obtain a half-year rate value. As of July 12th 2023 there have been eight mass killings recorded. This is day 193 of this year. Use this predicted expected value and the adapt the code, below, (to be changed by you) for the number of mass killings (adjusted for this part year year scale) to see if your model is close to the observed value of eight mass killing events. Comment, briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+masskill.df = read.csv('masskill.csv')
+MK.fit = glm(masskill ~ I(year - 1982)*I(year>=2020),subset = (year!=2023), family = "poisson", offset = log(popn/100),data = masskill.df)
+predicted_year = predict(MK.fit, data.frame(year = 2023, popn = 334.23), type = "response") * (193 / 365)
+pred.mean = predicted_year
+barplot(dpois(0:20, lambda = pred.mean), ylab = "Probability", xlab = "x",
+        space = 1, names.arg = 0:20,
+        main = paste("Distribution of Poisson with mean =", round(pred.mean, 2),
+                     "mass killings per part year"))
+abline(v = 8, col = "red", lwd = 2)
+```
+
+### Comment
+
+The main distribution is distributed in 14 to 16 so that our model has a greater variability, this is not close to the observed value of eight mass killing events.
+
+# Question 2
+
+## (a) Adapt the above code to compute the null deviance and deviance statistics for the model you have proposed above.
+
+```{r,fig.height=4.2,fig.width=6}
+set.seed(345)
+nx=1e4
+x=seq(-5.5, 5.5, length=nx)
+y=rbinom(n=nx,size=50, prob=exp(0+1*x)/(1+exp(0+1*x)))
+plot(I(y/50)~x, col="lightgrey")
+mod=glm(cbind(y,50-y)~x, family=binomial)
+L1 = sum(log(dbinom(y,size=50,prob=y/50)))
+L0 = sum(log(dbinom(y,size=50,mean(y)/50)))
+Ls = sum(log(dbinom(y,size=50,prob=y/50)))
+L = sum(log(dbinom(y,size=50,fitted(mod))))
+deviance = 2*(Ls-L)
+null_deviance = 2*(L1-L0)
+show(deviance)
+show(null_deviance)
+summary(mod)
+```
+
+## (b) Again, adapt the above code to compute the residual deviance for each observation from i = 1, . . . , n.
+
+```{r,fig.height=4.2,fig.width=6}
+deviance_residuals = residuals(mod, type = "deviance")
+head(deviance_residuals,1000)
+range(deviance_residuals-resid(mod))
+```
+
+## (c) Calculate the Pearson residual for this model for each observation from i = 1, . . . , n.
+
+```{r,fig.height=4.2,fig.width=6}
+ni = 50
+yi = y
+pi = fitted(mod)
+pearson_residuals = (yi - ni * pi) / sqrt(ni * pi * (1 - pi)) 
+head(pearson_residuals,1000)
+range(pearson_residuals-resid(mod, type="pearson"))
+```
+
+## (d) Use an scatter plot (augmented with an appropriate line) to show that this model's deviance residuals and Pearson residuals are very close to each other.
+
+```{r,fig.height=4.2,fig.width=6}
+plot(pearson_residuals, deviance_residuals, xlab = "Pearson Residuals", ylab = "Deviance Residuals")
+abline(0, 1, lty=2, col='red')
+```

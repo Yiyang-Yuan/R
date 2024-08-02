@@ -1,0 +1,197 @@
+---
+title: "STATS 330 Assignment 3"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 18:30pm, 29th Sep 2023'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+  pdf_document:
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE, message=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(MASS)
+library(mgcv)
+library(s20x)
+library(MuMIn)
+```
+
+# Question 1
+
+## (a) Plot these data. Ensure that the point colour of this scatter is light grey (as it makes it easier to look at). Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+XY.df = read.csv('XY.csv')
+plot(y~x, data=XY.df, col='lightgrey')
+```
+
+### Comment briefly
+
+This is a scatter plot of y over x. The plot shows that the random observation(y) exponentially increases and the distribution of points becomes more dispersed as a sequence numbers(x) increased.
+
+## (b) Fit your first basic model and look at the summary output. Call this model object mod1. Investigate the predicted value/deviance residual plot. Comment briefly
+
+```{r,fig.height=3.6,fig.width=6}
+XY.df = read.csv('XY.csv')
+mod1 = glm(y~x,data=XY.df,family = "poisson")
+summary(mod1)
+1-pchisq(mod1$deviance,mod1$df.residual)
+plot(mod1, which=1, col='lightgrey')
+```
+
+### Comment briefly
+
+GOF test shows that there is no evidence to believe that our model is correct(residual deviance is far more greater than degree of freedom). Furthermore, according to predicted value residual plot, we can see the variance shows over dispersion with high variability range. The plot also appears right skewed(cluster of points at the left seems lower than at the right) so that we need to adjust the model.
+
+## (c) Fit a quasi-adjusted model and look at the summary output --- call this model object mod2. Investigate the predicted value/deviance residual plot and comment briefly. Explain how the model parameter estimates and their associated standard errors have changed from your first (basic) model. Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+XY.df = read.csv('XY.csv')
+mod2 = glm(y~x,data=XY.df,family = "quasipoisson")
+1-pchisq(mod2$deviance,mod2$df.residual)
+plot(mod2, which=1, col='lightgrey')
+summary(mod1)$coef
+summary(mod2)$coef
+summary(mod2)$disp
+```
+
+### Comment briefly
+
+After we adjust our model by quasi, the predicted value residual plot of mod2 looks very similar as mod1 and GOF test still shows that we need to fit a new model to adopt. The associated model parameter estimates for y and x do not change. However, we can see that the associated standard errors for y and x are increased with square root of 27.1 times original std.error(mod1).
+
+## (d) The two models models above are clearly not adequate. Fit a final new, hopefully, more apt model. Call this model object mod3. Look at the summary output. Investigate the predicted value/deviance residual plot. Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+XY.df = read.csv('XY.csv')
+mod3 = glm.nb(y~x, data=XY.df)
+summary(mod3)
+1-pchisq(mod3$deviance,mod3$df.residual)
+plot(mod3, which=1, col='lightgrey')
+```
+
+### Comment briefly
+
+Now the GOF test shows that there is very strong evidence to believe our model is correct. The predicted value residual plot of mod3 also looks better with constant scatter, and over dispersion has been solved with lower variability range. Therefore, this is more adopt model.
+
+## (e) The following code allows us to plot the sample means and sample variances when the variable its cut' into 20 sequential, say, 'bins'. It has the means and variances superimposed on it that we would obtained if we were to use the model described using mod1 above (in red). Your task is to superimpose the mean/variance relationship you would encounter using the models mod2 (in green) and mod3 (in blue). Comment briefly on your final plot.
+
+```{r,fig.height=4.2,fig.width=6}
+# cutting data into 20 bins
+fs=cut(XY.df$x,20)
+mny=tapply(XY.df$y, fs, mean)
+vary=tapply(XY.df$y, fs, var)
+# plot mean-variance relation
+plot(mny, vary)
+lines(mny, mny, lty=2, col="red")
+# superimpose two more lines on the plot above
+lines(mny,mny*summary(mod2)$disp, lty=2, col='green')
+lines(mny,mny+(mny^2/mod3$theta), lty=2, col='blue')
+legend("topleft", legend=c("Poisson", "quasi-Poisson", "negative-binomial"),lty=rep(2,3),
+col=c("red", "green", "blue"))
+```
+
+### Comment briefly
+
+According to this plot, we can see that the variance of negative-binomial model and mean indicates a good fit of linear relationship. Therefore, we can conclude that this is more adopt model.
+
+## (f) State, mathematically, the model you are fitting in mod3.
+
+$log(y_i)=\beta_0+\beta_1\times x_i$ Where $Y_i \sim Negative Binomial(yi, θ)$
+
+# Question 2
+
+## (a) Update this plot.
+
+```{r,fig.height=4.2,fig.width=6}
+MK.df = read.csv('masskill.csv')
+masskill.lin = glm(masskill ~ I(year-1982), offset=log(popn/100), subset = (year <= 2019), family="poisson", data=MK.df)
+masskill.quad = glm(masskill ~ I(year-1982)+I((year-1982)^2), offset=log(popn/100), subset = (year <= 2019), family="poisson", data=MK.df)
+masskill.gam = gam(masskill ~ s(I(year-1982))+offset(log(popn/100)), subset = (year <= 2019), family="poisson", data=MK.df)
+masskill.null = glm(masskill ~ 1, offset=log(popn/100), subset = (year <= 2019), family="poisson", data=MK.df)
+
+plot(masskill ~ year, data=MK.df[MK.df$year<=2019,])
+yar = MK.df$year[MK.df$year<=2019]
+lines(yar, exp(predict(masskill.gam)), col='black', lty=1)
+lines(yar, exp(predict(masskill.lin)), col= 'red', lty=2)
+lines(yar, exp(predict(masskill.null)), col='blue', lty=3)
+lines(yar, exp(predict(masskill.quad)), col='green', lty=4)
+```
+
+## (b) Compare any nested models using the anova. Compare all four models using AIC. Comment briefly.
+
+```{r,fig.height=4.2,fig.width=6}
+anova(masskill.null, masskill.lin, masskill.quad, masskill.gam, test='Chisq')
+AIC(masskill.null, masskill.lin, masskill.quad, masskill.gam)
+```
+
+### Comment briefly
+
+The anova() test shows that the P-value for both linear and quadratic model is significant compared to the null model. Therefore, we can conclude that both I(year - 1982) and I((year - 1982)^2) parameters need to be kept. Then according to the AIC() test, we can see that gam model has lowest AIC value. However, the difference between quadratic and gam is less than 2. We can conclude that both gam and quadratic models are similarly support.
+
+## (c) Comment briefly on what the above analyses indicates to you.
+
+The quadratic model in the plot shows the line that best fits the line drawn by gam model and the anova() test shows both I(year - 1982) and I((year - 1982)^2) parameters need to be kept in the model. Finally, AIC() test shows quadratic model has the lowest value so that it is the best model we can use. 
+
+# Question 3 
+
+## (a) Submit the code below and answer the following questions: Why did we create a variable called log moonsp1? What do you conclude about the relationships you observe in the resulting pairs20x plot? Explain why we may have to drop one of log Mass or log Distance in subsequent modelling.
+
+```{r,fig.height=4.2,fig.width=6}
+Moons.df <- read.csv("Moons.csv",stringsAsFactors = TRUE)
+# Density var
+Moons.df=within(Moons.df,{Density=Mass/Diameter^3})
+names(Moons.df)
+# new variables
+names(Moons.df)
+LogMoons.df=cbind(Moons.df[,c("Name","Moons")],
+log(Moons.df[,"Moons"]+1),log(Moons.df[,c(2:4,6)]))
+names(LogMoons.df)=c("Name", "Moons", "log_moonsp1",
+paste("log", names(Moons.df[c(2:4,6)]), sep="_"))
+names(LogMoons.df)
+pairs20x(LogMoons.df[,-(1:2)])
+```
+
+### Explain
+
+1. Why did we create a variable called log moonsp1?
+-> Because the value of moons contains 0, it is not possible to log numbers containing 0. Therefore, we take the logarithm of the entire data after plus 1 to find the relationship between variables.
+
+2. What do you conclude about the relationships you observe in the resulting pairs20x plot?
+-> According to the pairs20x plot, we can see that:
+There is a very strong relationship between log(diameter) and log(mass). 
+There is a strong relationship between log(moonsp1) and log(diameter), log(moonsp1) and log(mass), log(moonsp1) and log(density).
+There is a weak relationship between log(moonsp1) and log(distance), log(moonsp1) and log(mass), log(moonsp1) and log(density), log(diameter) and log(density), log(mass) and log(density).
+There is a very weak relationship between log(diameter) and log(distance).
+
+3. Why we may have to drop one of log Mass or log Diameter in subsequent modelling?
+-> Because there is a very strong relationship between log(Mass) and log(Diameter) so that drop one of variable will not affect the coefficient output of other parameters.
+
+## (b) Use the following code as large model that needs simplifying. Produce a simpler model using the R package MuMIn to find the most parsimonious model.
+
+```{r,fig.height=4.2,fig.width=6}
+fit.all=glm(Moons~(log_Distance+log_Mass+log_Density)^2+I(log_Distance^2) +I(log_Mass^2), family=poisson, data=LogMoons.df)
+options(na.action = "na.fail")
+all.fits = dredge(fit.all)
+head(all.fits)
+# most parsimonious model
+best_model = get.models(all.fits,1)[[1]]
+summary(best_model)
+```
+
+## (c) Comment on this ‘best’ model and, in particular, how it relates to the insights you made using the pairs20x plot above.
+
+$log(µ_i)=\beta_0+\beta_1 \times log(Distance)+\beta_2 \times log(Distance)^2+\beta_3 \times log(Mass)=-0.2+3.08 \times log(Distance)+(-0.69) \times log(Distance)^2+0.20 \times log(Mass)$
+
+According to model search strategies, we can see that this model has the lowest AICc value and the difference of AICc between first and second model is greater than 2. Therefore, we have evidence to conclude that this is the 'best' model to fit.
+
+According to pairs20x plot, we can see there is a negative quadratic relationship between response variable and log(Distance). Meanwhile, pairs20x plot also indicates a slight positive quadratic relationship between response variable and log(Mass). Due to a very strong relationship between log(Diameter) and log(Mass), we must drop one of variable from them. Therefore, we keep log(Distance) and log(Mass) in our final model.

@@ -1,0 +1,87 @@
+---
+title: "STATS 201/8 Assignment 1"
+author: "Yiyang Yuan yyua260"
+date: 'Due Date: 3pm, Thursday 17th March 2022'
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: yes
+  word_document:
+    number_sections: yes
+  pdf_document:
+    number_sections: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.height=3)
+```
+
+```{r setup, echo=FALSE, message=FALSE}
+## Do not delete this!
+## It loads the s20x library for you. If you delete it 
+## your document may not compile
+library(s20x)
+```
+
+# Question 1
+
+## Question of interest/goal of the study
+
+The goal is to use the breath alcohol elimination rate to estimate the blood alcohol elimination rate.
+
+## Read in and inspect the data:
+
+```{r,fig.height=4.2,fig.width=6}
+Alcohol.df = read.csv('alcohol.csv')
+plot(BloodRate ~ BreathRate, data = Alcohol.df, xlab = "Breath alcohol elimination rate", ylab = "Blood alcohol elimination rates")
+```
+
+## Comment on the plot
+
+This is a scatter of bloodrate over breathrate. The plot reveals a positive linear relationship and it is non-constant through breathrate.
+
+## Fit an appropriate linear model, including model checks and relevant output.
+
+```{r,fig.height=3.6,fig.width=6}
+Alcohol.lm = lm(BloodRate ~ BreathRate, data = Alcohol.df)
+plot(Alcohol.lm, which = 1)
+normcheck(Alcohol.lm)
+cooks20x(Alcohol.lm)
+summary(Alcohol.lm)
+confint(Alcohol.lm)
+# Generate any additional inference output required here, if needed.
+0.01*confint(Alcohol.lm)
+```
+
+## Create a scatter plot with the fitted line from your model superimposed over it.
+
+```{r,fig.height=4.2,fig.width=6}
+plot(BloodRate ~ BreathRate, data = Alcohol.df, xlab = "Breath alcohol elimination rate", ylab = "Blood alcohol elimination rates")
+abline(Alcohol.lm, lty=2, col='blue')
+```
+
+## Method and Assumption Checks
+
+The scatter plot indicated a clear linear relationship between the two elimination rates, so a simple linear regression model was fitted.
+
+It does appear that there is clear non-constant scatter in the residuals. Although we would normally be very concerned about this issue, for this assignment, we are going to ignore this (as we want to keep this analysis nice and simple and we don't cover how to solve this particular issue in this course). See STATS 330 for how to approach this sort of data. So DO NOT CHANGE THIS MODEL and continue as if this assumption was met.
+
+Otherwise the model assumptions were satisfied and the effect of breath rate was highly significant.
+
+### Complete the equation below:
+
+Our fitted model is:
+
+$Bloodrate_i = \beta_0 + \beta_1 \times Breathrate_i + \epsilon_i$ where $\epsilon_i \sim iid ~ N(0,\sigma^2)$
+
+### Complete the statement
+
+Our model explains 80% of the variability in the data.
+
+## Executive Summary
+
+We wish to use the breath alcohol elimination rate to estimate the blood alcohol elimination rate.
+
+There was a strong, positive relationship(P-value ≈ 0) between Bloodrate and Breathrate.
+
+We estimate that 0.01 increase in Breathrate would increase Bloodrate betweem 0.016 to 0.021 on average.
